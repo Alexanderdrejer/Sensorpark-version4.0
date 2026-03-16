@@ -38,7 +38,7 @@ def hent_maaling():
     query_api = client.query_api()
     query = f'''
     from(bucket: "{os.getenv("INFLUX_BUCKET")}")
-      |> range(start: -1m)
+      |> range(start: -25h)
       |> last()
     '''
     tables = query_api.query(query, org=os.getenv("INFLUX_ORG"))

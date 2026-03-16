@@ -8,6 +8,7 @@
 #include "WiFimanager.h"
 #include "secrets.h"
 #include "HttpSender.h"
+#include <esp_sleep.h>
 
 #define SDA 21
 #define SCL 22
@@ -27,26 +28,24 @@ void setup() {
   sensors.push_back(&Carbon_);
   sensors.push_back(&Temperature_humidity);
   Wifi_.connect(ssid, password);
+  configTime(3600, 0, "pool.ntp.org");
 }
 
 void loop() {
-  Payload Payload_;
+    struct tm timeinfo;
+    getLocalTime(&timeinfo);
+    int hour = timeinfo.tm_hour;
 
-  for (auto &sensorer : sensors) {
-    sensorer->fillPayload(Payload_);
-  }
+    if (hour == 1 || hour == 6 || hour == 12 || hour == 18 || hour == 0) {
+        Payload Payload_;
+        for (auto &sensor : sensors) {
+            sensor->fillPayload(Payload_);
+        }
+        HttpSend.send("http://sensorpark-version40-production.up.railway.app/maaling",
+                      Payload_.temperature, Payload_.humidity, Payload_.CO2);
+    }
 
-  Serial.print("Humidity: ");
-  Serial.println(Payload_.humidity);
-
-  Serial.print("Temp: ");
-  Serial.println(Payload_.temperature);
-
-  Serial.print("CO2: ");
-  Serial.println(Payload_.CO2);
-
-  delay(5000);
-
-  HttpSend.send("http://192.168.0.117:8000/maaling", Payload_.temperature, Payload_.humidity, Payload_.CO2);
-
+    esp_sleep_enable_timer_wakeup(3600ULL * 1000000ULL);
+    esp_light_sleep_start();
 }
+
