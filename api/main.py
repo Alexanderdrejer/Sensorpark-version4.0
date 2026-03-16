@@ -38,15 +38,21 @@ def hent_maaling():
     query_api = client.query_api()
     query = f'''
     from(bucket: "{os.getenv("INFLUX_BUCKET")}")
-      |> range(start: -25h)
-      |> last()
+      |> range(start: -1d)
+      |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
     '''
     tables = query_api.query(query, org=os.getenv("INFLUX_ORG"))
     
-    result = {}
+    result = []
     for table in tables:
         for record in table.records:
-            result[record.get_field()] = record.get_value()
+            result.append({
+                "time": record.get_time().isoformat(),
+                "temperature": record.values.get("temperature"),
+                "humidity": record.values.get("humidity"),
+                "co2": record.values.get("co2")
+            })
     
     return result
+
 
